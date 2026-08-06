@@ -2,6 +2,8 @@ import subprocess
 import tempfile
 import os
 
+from models.flake8_result import Flake8Result
+
 
 def run_flake8(code: str):
 
@@ -22,8 +24,6 @@ def run_flake8(code: str):
             capture_output=True,
             text=True
         )
-
-        from models.flake8_result import Flake8Result
 
         return Flake8Result(
             success=result.returncode == 0,
