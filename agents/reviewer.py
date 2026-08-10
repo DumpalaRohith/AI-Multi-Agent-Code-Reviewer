@@ -1,7 +1,7 @@
 from tools.python_tool import execute_python
 from llm import llm
 from langchain_core.prompts import ChatPromptTemplate
-
+from tools.flake8_tool import run_flake8
 with open("prompts/reviewer_prompt.txt", "r", encoding="utf-8") as file:
     reviewer_prompt = file.read()
 
@@ -17,6 +17,7 @@ chain = prompt | llm
 def review_code(code: str):
 
     execution_result = execute_python(code)
+    flake8 = run_flake8(code)
 
     response = chain.invoke(
         {
@@ -24,6 +25,7 @@ def review_code(code: str):
             "success": execution_result.success,
             "output": execution_result.output,
             "error": execution_result.error,
+            "flake8_report": flake8.report
         }
     )
 

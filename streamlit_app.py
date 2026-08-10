@@ -1,5 +1,10 @@
 import streamlit as st
-from workflow import workflow
+import requests
+
+
+# -----------------------------
+# Page Configuration
+# -----------------------------
 
 st.set_page_config(
     page_title="AI Multi-Agent Code Reviewer",
@@ -7,9 +12,21 @@ st.set_page_config(
     layout="wide"
 )
 
+
+# -----------------------------
+# Title
+# -----------------------------
+
 st.title("🤖 AI Multi-Agent Code Reviewer")
 
-st.write("Paste your Python code below and click **Review Code**.")
+st.write(
+    "Paste your Python code below and click **Review Code**."
+)
+
+
+# -----------------------------
+# Code Input
+# -----------------------------
 
 code = st.text_area(
     "Enter Python Code",
@@ -17,40 +34,104 @@ code = st.text_area(
     placeholder="Paste your Python code here..."
 )
 
+
+# -----------------------------
+# Review Button
+# -----------------------------
+
 if st.button("Review Code"):
 
+    # Check whether code was entered
     if code.strip() == "":
         st.warning("Please enter some Python code.")
 
     else:
 
-        with st.spinner("🤖 Reviewing your code..."):
+        # Show loading message
+        with st.spinner("Reviewing your code..."):
 
-            result = workflow.invoke(
-                {
-                    "code": code,
-                    "review": "",
-                    "optimized_code": "",
-                    "explanation": ""
-                }
-            )
+            try:
 
-        st.success("✅ Analysis completed successfully!")
+                # Send code to FastAPI
+                response = requests.post(
+                    "http://127.0.0.1:8000/review",
+                    json={
+                        "code": code
+                    },
+                    timeout=120
+                )
 
-        left, right = st.columns(2)
+                # Check API response
+                if response.status_code == 200:
 
-        with left:
+                    result = response.json()
 
-            st.subheader("📋 Review Report")
-            st.write(result["review"])
+                    st.success(
+                        "✅ Analysis completed successfully!"
+                    )
 
-        with right:
+                    # -----------------------------
+                    # Display Results
+                    # -----------------------------
 
-            st.subheader("🚀 Optimized Code")
-            st.code(
-                result["optimized_code"],
-                language="python"
-            )
+                    left, right = st.columns(2)
 
-        st.subheader("📖 Explanation")
-        st.write(result["explanation"])
+                    # Review
+                    with left:
+
+                        st.subheader("📋 Review Report")
+
+                        st.write(
+                            result["review"]
+                        )
+
+                    # Optimized Code + Explanation
+                    with right:
+
+                        st.subheader("🚀 Optimized Code")
+
+                        st.code(
+                            result["optimized_code"],
+                            language="python"
+                        )
+
+                        st.subheader("📖 Explanation")
+
+                        st.write(
+                            result["explanation"]
+                        )
+
+                else:
+
+                    st.error(
+                        f"API request failed: "
+                        f"{response.status_code}"
+                    )
+
+                    st.write(
+                        response.text
+                    )
+
+            except requests.exceptions.ConnectionError:
+
+                st.error(
+                    "❌ Could not connect to the FastAPI server."
+                )
+
+                st.info(
+                    "Make sure FastAPI is running with:\n\n"
+                    "`python -m uvicorn api.review:app --reload`"
+                )
+
+            except requests.exceptions.Timeout:
+
+                st.error(
+                    "⏱️ The request took too long. "
+                    "Please try again."
+                )
+
+            except requests.exceptions.RequestException as e:
+
+                st.error(
+                    f"❌ Request error: {e}"
+                )
